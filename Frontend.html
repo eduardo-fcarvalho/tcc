@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interface Interativa</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .autocomplete-suggestions {
+            border: 1px solid #ccc;
+            background: #fff;
+            max-height: 150px;
+            overflow-y: auto;
+            position: absolute;
+            z-index: 1000;
+        }
+        .autocomplete-suggestions div {
+            padding: 8px;
+            cursor: pointer;
+        }
+        .autocomplete-suggestions div:hover {
+            background: #f0f0f0;
+        }
+        #chartCanvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sistema de Pesquisas</h1>
+
+    <div>
+        <h2>Escolha uma consulta</h2>
+        <div class="form-group">
+            <label for="queryType">Tipo de consulta:</label>
+            <select id="queryType" onchange="toggleInputs()">
+                <option value="grades_by_user">Histórico de notas por aluno</option>
+                <option value="users_by_course">Alunos inscritos em um curso</option>
+                <option value="all_courses">Todos os cursos</option>
+                <option value="all_grades_by_course">Todas as notas por curso</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="userInput" style="display: none;">
+            <label for="userName">Nome do Aluno:</label>
+            <input type="text" id="userName" placeholder="Digite o nome do aluno" oninput="autocomplete('user')">
+            <div id="userSuggestions" class="autocomplete-suggestions"></div>
+        </div>
+
+        <div class="form-group" id="courseInput" style="display: none;">
+            <label for="courseName">Nome do Curso:</label>
+            <input type="text" id="courseName" placeholder="Digite o nome do curso" oninput="autocomplete('course')">
+            <div id="courseSuggestions" class="autocomplete-suggestions"></div>
+        </div>
+
+        <button onclick="executeQuery()">Consultar</button>
+    </div>
+
+    <div id="results">
+        <h2>Resultados:</h2>
+        <pre id="resultData">Escolha uma consulta para ver os resultados aqui...</pre>
+        <canvas id="chartCanvas" style="max-width: 800px; margin-top: 20px;"></canvas>
+    </div>
+
+    <script>
+        let chartInstance = null;
+
+        function toggleInputs() {
+            const queryType = document.getElementById('queryType').value;
+            document.getElementById('userInput').style.display = queryType === 'grades_by_user' ? 'block' : 'none';
+            document.getElementById('courseInput').style.display = queryType === 'users_by_course' || queryType === 'all_students_by_course' || queryType === 'all_grades_by_course' ? 'block' : 'none';
+        }
+		
+		function renderTable(data) {
+			const resultsDiv = document.getElementById('resultData');
+			resultsDiv.innerHTML = ''; // Limpar saída anterior
+
+			if (!Array.isArray(data) || data.length === 0) {
+				resultsDiv.innerHTML = '<p>Nenhum dado encontrado.</p>';
+				return;
+			}
+
+			const table = document.createElement('table');
+			table.style.width = '100%';
+			table.style.borderCollapse = 'collapse';
+
+			// Adicionar cabeçalho da tabela
+			const headerRow = document.createElement('tr');
+			Object.keys(data[0]).forEach(key => {
+				const th = document.createElement('th');
+				th.textContent = key.replace('_', ' ').toUpperCase();
+				th.style.border = '1px solid #ccc';
+				th.style.padding = '8px';
+				th.style.textAlign = 'left';
+				th.style.backgroundColor = '#f0f0f0';
+				headerRow.appendChild(th);
+			});
+			table.appendChild(headerRow);
+
+			// Adicionar linhas de dados
+			data.forEach(row => {
+				const tr = document.createElement('tr');
+				Object.values(row).forEach(value => {
+					const td = document.createElement('td');
+					td.textContent = value;
+					td.style.border = '1px solid #ccc';
+					td.style.padding = '8px';
+					tr.appendChild(td);
+				});
+				table.appendChild(tr);
+			});
+
+			resultsDiv.appendChild(table);
+		}
+
+
+        function autocomplete(type) {
+            const input = type === 'user' ? document.getElementById('userName') : document.getElementById('courseName');
+            const suggestionsBox = type === 'user' ? document.getElementById('userSuggestions') : document.getElementById('courseSuggestions');
+
+            if (input.value.length < 2) {
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+
+            fetch(`api_backend.php?action=autocomplete&type=${type}&query=${encodeURIComponent(input.value)}`)
+                .then(response => response.json())
+                .then(data => {
+                    suggestionsBox.innerHTML = '';
+                    data.forEach(item => {
+                        const suggestion = document.createElement('div');
+                        suggestion.textContent = item.name;
+                        suggestion.onclick = () => {
+                            input.value = item.name;
+                            suggestionsBox.innerHTML = '';
+                        };
+                        suggestionsBox.appendChild(suggestion);
+                    });
+                })
+                .catch(error => console.error('Erro ao buscar sugestões:', error));
+        }
+
+        function executeQuery() {
+            const queryType = document.getElementById('queryType').value;
+            const userName = document.getElementById('userName').value;
+            const courseName = document.getElementById('courseName').value;
+
+            if ((queryType === 'grades_by_user' && !userName) ||
+                ((queryType === 'users_by_course' || queryType === 'all_students_by_course' || queryType === 'all_grades_by_course') && !courseName)) {
+                alert('Por favor, preencha os campos obrigatórios.');
+                return;
+            }
+
+            let url = 'api_backend.php?action=' + queryType;
+
+            if (queryType === 'grades_by_user') {
+                url += '&user_name=' + encodeURIComponent(userName);
+            } else if (queryType === 'users_by_course' || queryType === 'all_students_by_course' || queryType === 'all_grades_by_course') {
+                url += '&course_name=' + encodeURIComponent(courseName);
+            }
+
+            fetch(url)
+				.then(response => response.json())
+				.then(data => {
+					document.getElementById('resultData').textContent = JSON.stringify(data, null, 2);
+
+					if (queryType === 'grades_by_user') {
+						const labels = data.map(item => item.course_name); // Cursos no eixo X
+						const grades = data.map(item => parseFloat(item.grade));
+						renderChart(labels, grades, 'Notas por Curso');
+					} else if (queryType === 'all_grades_by_course') {
+						const labels = data.map(item => item.student_name); // Alunos no eixo X
+						const grades = data.map(item => parseFloat(item.grade));
+						renderChart(labels, grades, 'Notas por Aluno');
+					} else {
+						clearChart(); // Limpa o gráfico para consultas sem visualizações
+					}
+					renderTable(data);
+				})
+				.catch(error => {
+					console.error('Erro na consulta:', error);
+					document.getElementById('resultData').textContent = 'Erro na consulta.';
+					clearChart();
+				});
+        }
+
+        function clearChart() {
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+            document.getElementById('chartCanvas').style.display = 'none';
+        }
+
+        function renderChart(labels, data, labelText) {
+            const ctx = document.getElementById('chartCanvas').getContext('2d');
+            document.getElementById('chartCanvas').style.display = 'block';
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: labelText,
+                        data: data,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Valor: ${context.raw}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+							ticks: {
+								autoSkip: false, // Evita que rótulos sejam omitidos
+								maxRotation: 45, // Define a inclinação dos rótulos
+								minRotation: 0, // Mantém os rótulos legíveis
+							}
+						},
+						y: {
+							beginAtZero: true
+						}
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
