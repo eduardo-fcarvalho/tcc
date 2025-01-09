@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 04/01/2025 às 20:39
+-- Tempo de geração: 09/01/2025 às 17:59
 -- Versão do servidor: 10.4.28-MariaDB
 -- Versão do PHP: 8.2.4
 
@@ -11,9 +11,17 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
 --
 -- Banco de dados: `clone_moodle`
 --
+CREATE DATABASE IF NOT EXISTS `clone_moodle` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `clone_moodle`;
 
 -- --------------------------------------------------------
 
@@ -21,6 +29,7 @@ SET time_zone = "+00:00";
 -- Estrutura para tabela `courses`
 --
 
+DROP TABLE IF EXISTS `courses`;
 CREATE TABLE `courses` (
   `id` int(11) NOT NULL,
   `fullname` varchar(255) NOT NULL,
@@ -39,6 +48,7 @@ CREATE TABLE `courses` (
 -- Estrutura para tabela `course_grade_history`
 --
 
+DROP TABLE IF EXISTS `course_grade_history`;
 CREATE TABLE `course_grade_history` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -53,6 +63,7 @@ CREATE TABLE `course_grade_history` (
 -- Estrutura para tabela `roles`
 --
 
+DROP TABLE IF EXISTS `roles`;
 CREATE TABLE `roles` (
   `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL DEFAULT '',
@@ -77,6 +88,7 @@ INSERT INTO `roles` (`id`, `name`, `shortname`, `description`, `sortorder`, `arc
 -- Estrutura para tabela `users`
 --
 
+DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
   `firstname` varchar(255) NOT NULL,
@@ -91,6 +103,7 @@ CREATE TABLE `users` (
 -- Estrutura para tabela `user_course_history`
 --
 
+DROP TABLE IF EXISTS `user_course_history`;
 CREATE TABLE `user_course_history` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -180,3 +193,7 @@ ALTER TABLE `user_course_history`
   ADD CONSTRAINT `user_course_history_ibfk_2` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`),
   ADD CONSTRAINT `user_course_history_ibfk_3` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`);
 COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
